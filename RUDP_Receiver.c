@@ -9,6 +9,8 @@
 #include <stdbool.h>
 #include "RUDP_API.h"
 
+
+
 /*
  * maximum number of senders is 1.
  */
@@ -35,50 +37,48 @@ char *util_generate_random_data(unsigned int size)
     return buffer;
 }
 
+
 int main(int argc, char *argv[])
 {
     if (argc != 3)
     {
-        printf("Usage: %s <port>\n", argv[0]);
+        printf("not valid");
         return 1;
     }
-
     char *port = argv[1];
-    int port_num = atoi(port);
+
 
     ssize_t bytes_received = 0;
     clock_t beginning_t, finish_t;
     double total_t;
 
     char buffer[BUFFER_SIZE];
+    int port_num = atoi(port);
 
     // Try to create a RUDP socket (IPv4, stream-based, default protocol).
     RUDP_Socket *sock = rudp_socket(true, port_num);
     if (sock == NULL)
     {
-        perror("Socket creation failed");
+        perror("socket(2)");
         return 1;
     }
 
     RUDP_Socket *sender_sock = rudp_accept(sock);
     if (sender_sock == NULL)
     {
-        perror("Accept failed");
+        perror("accept(2)");
         rudp_close(sock);
         return 1;
     }
 
     struct sockaddr_in sender;
-    socklen_t sender_len = sizeof(sender);
-    if (getpeername(sender_sock->socket_fd, (struct sockaddr *)&sender, &sender_len) == -1)
-    {
-        perror("Get peer name failed");
-        rudp_close(sock);
-        return 1;
-    }
-
+    memset(&sender, 0, sizeof(sender));
+    // Print a message to the standard output to indicate that a new client has connected.
     fprintf(stdout, "Sender %s:%d connected\n", inet_ntoa(sender.sin_addr), ntohs(sender.sin_port));
 
+    // Create a buffer to store the received message.
+
+    // Create the file that we adding an infromation to
     FILE *file = fopen("print_file", "w+");
     if (file == NULL)
     {
@@ -95,15 +95,19 @@ int main(int argc, char *argv[])
     int opt = 1;
     while (listen_flag)
     {
+        // size_t total_bytes_sent = 0;
+
         beginning_t = clock();
 
         // Receive a message from the sender and store it in the buffer.
-        bytes_received = rudp_recv(sender_sock, buffer, BUFFER_SIZE);
+        bytes_received = rudp_recv(sender_sock, buffer, 2 * 1024 * 1024);
+
+        // total_bytes_sent += bytes_received;
 
         // If the message receiving failed, print an error message and return 1.
         if (bytes_received < 0)
         {
-            perror("Message receiving failed");
+            perror("message receiving failed");
             close(sender_sock->socket_fd);
             close(sock->socket_fd);
             return 1;
@@ -127,9 +131,9 @@ int main(int argc, char *argv[])
 
         opt++;
     }
-
+    
     fprintf(file, "- Average time: %fms\n", average_t / (opt - 1));
-    fprintf(file, "- Average bandwidth: %fMB/s\n", average_s / (opt - 1));
+    fprintf(file, "- Average bandwidth: %fMB/S\n", average_s / (opt - 1));
     fprintf(file, "- - - - - - - - - - - - - - - \n");
 
     rewind(file);
@@ -139,12 +143,12 @@ int main(int argc, char *argv[])
         printf("%s", print);
     }
 
+    // Check if the file is close
     if (fclose(file) != 0)
     {
         perror("Error closing file");
         return 1;
     }
-
     fprintf(stdout, "Sender %s:%d disconnected \n", inet_ntoa(sender.sin_addr), ntohs(sender.sin_port));
 
     fprintf(stdout, "Receiver end.\n");

@@ -12,20 +12,7 @@
 
 #define BUFFER_SIZE 1024
 
-char *util_generate_random_data(unsigned int size)
-{
-    char *buffer = NULL;
-    if (size == 0)
-        return NULL;
-    buffer = (char *)calloc(size, sizeof(char));
-    if (buffer == NULL)
-        return NULL;
-    srand(time(NULL));
-    for (unsigned int i = 0; i < size; i++)
-        *(buffer + i) = ((unsigned int)rand() % 256);
-    return buffer;
-}
-
+char *util_generate_random_data(unsigned int size);
 
 int main(int argc, char *argv[]){
     char *exit_msg = "EXIT";
@@ -112,4 +99,18 @@ int main(int argc, char *argv[]){
     fprintf(stdout, "Connection closed!\n");
 
     return 0;
+}
+
+char *util_generate_random_data(unsigned int size)
+{
+    char *buffer = NULL;
+    if (size == 0)
+        return NULL;
+    buffer = (char *)calloc(size, sizeof(char));
+    if (buffer == NULL)
+        return NULL;
+    srand(time(NULL));
+    for (unsigned int i = 0; i < size; i++)
+        *(buffer + i) = ((unsigned int)rand() % 256);
+    return buffer;
 }
