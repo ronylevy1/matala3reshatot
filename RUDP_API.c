@@ -49,21 +49,22 @@ RUDP_Socket* rudp_socket(bool isServer, unsigned short int listen_port){
 
 // Tries to connect to the other side via RUDP to given IP and port. Returns 0 on failure and 1 on success. Fails if called when the socket is connected/set to server.
 RUDP_Socket* rudp_connect(RUDP_Socket* sockfd, const char *dest_ip, unsigned short int dest_port){
-     struct sockaddr_in dest_addr;
     
-    memset(&dest_addr, 0, sizeof(dest_addr));
-    dest_addr.sin_family = AF_INET;
-    dest_addr.sin_port = htons(dest_port);
-    dest_addr.sin_addr.s_addr = inet_addr(dest_ip);
-    if (dest_addr.sin_addr.s_addr == INADDR_NONE) {
+    memset(&sockfd->dest_addr, 0, sizeof(struct sockaddr_in));
+    sockfd->dest_addr.sin_family = AF_INET;
+    sockfd->dest_addr.sin_port = htons(dest_port);
+    sockfd->dest_addr.sin_addr.s_addr = inet_addr(dest_ip);
+    if (sockfd->dest_addr.sin_addr.s_addr == INADDR_NONE) {
         fprintf(stderr, "Invaild ip\n");
         return NULL; 
     }
 
-    if (connect(sockfd->socket_fd, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) < 0) {
+    if (connect(sockfd->socket_fd, (struct sockaddr *)&sockfd->dest_addr, sizeof(struct sockaddr_in)) < 0) {
         perror("Error connecting");
         return NULL;  
     }
+
+    sockfd->isConnected = true;
 
     return sockfd;
 }
@@ -77,9 +78,9 @@ RUDP_Socket* rudp_accept(RUDP_Socket* sockfd) {
 
     struct sockaddr_in cli_addr;
     socklen_t len = sizeof(cli_addr);
-    
     // Receive a message to establish connection
-    ssize_t bytes_received = recvfrom(sockfd->socket_fd, NULL, 0, 0, (struct sockaddr *)&cli_addr, &len);
+    char buffer[60000] = {0}; 
+    ssize_t bytes_received = recvfrom(sockfd->socket_fd, buffer, 60000, 0, (struct sockaddr *)&cli_addr, &len);
     if (bytes_received == -1) {
         perror("Error receiving connection request");
         return NULL;
@@ -135,8 +136,7 @@ ssize_t rudp_send(RUDP_Socket* sockfd, void *buffer, unsigned int buffer_size){
     // Keep sending until all data in the buffer is sent
     while (total_bytes_sent < buffer_size) {
         // Attempt to send data
-        bytes_sent = sendto(sockfd->socket_fd, ptr + total_bytes_sent, buffer_size - total_bytes_sent, 0,
-                            (struct sockaddr *)&(sockfd->dest_addr), sizeof(sockfd->dest_addr));
+        bytes_sent = sendto(sockfd->socket_fd, ptr + total_bytes_sent, buffer_size - total_bytes_sent, 0,NULL,0);
         
         // Check for errors
         if (bytes_sent == -1) {
